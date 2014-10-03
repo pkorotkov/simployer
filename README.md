@@ -15,7 +15,7 @@ This vagrant bootstrap script is intended to help create minimally configured De
 The only thing you need to create a portable deployment procedure via Vagrant is a Vagrant file. This repo contains a simplified template of such a file.
 To make the Vagrant file valid, just replace the placeholders with real values:
 
-* __BOX__ (e.g. ubuntu/trusty64)
-* __HOST_NAME__ (e.g. myserver)
-* __HOST_PORT__
-* __GUEST_PORT__
+* `__BOX__` (e.g. ubuntu/trusty64)
+* `__HOST_NAME__` (e.g. myserver)
+* `__HOST_PORT__`
+* `__GUEST_PORT__`
