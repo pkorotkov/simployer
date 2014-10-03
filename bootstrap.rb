@@ -115,13 +115,14 @@ def no_rebuild_needed?(dir, rev)
 end
 
 def repository_added?(repo)
-  # File.readlines('/etc/apt/sources.list').each do |line|
-  #   if line.include? repo
-  #     return true
-  #   end
-  # end
+  rs = repo[4..repo.length-1].split('/')[0]
+  File.readlines('/etc/apt/sources.list').each do |line|
+    if line.include? rs
+      return true
+    end
+  end
   Dir['/etc/apt/sources.list.d/*.list'].each do |fn|
-    if fn.split('/').last.start_with? repo[4..repo.length-1].split('/')[0]
+    if fn.split('/').last.start_with? rs
       return true
     end
   end
