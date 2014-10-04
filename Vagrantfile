@@ -8,7 +8,7 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
   config.vm.box = "__BOX__"
   config.vm.provision :shell, path: "bootstrap.rb"
   config.vm.hostname = "__HOST_NAME__"
-  config.vm.network :forwarded_port, host: __HOST_PORT__, guest: __GUEST_PORT__
+  config.vm.network :forwarded_port, host: __HOST_PORT__, guest: __GUEST_PORT__, protocol: 'tcp'
 
   config.vm.box_check_update = true
 
