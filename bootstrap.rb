@@ -24,7 +24,7 @@ module Setup
     GO_ENV_VARS_FILE = '/etc/profile.d/goevars.sh'
     GO_ROOT = '/usr/local/go'
     GO_PATH = '/usr/local/gopath'
-    STABLE_REVISION = '1ebe0bc97711'
+    STABLE_REVISION = 'e898e5894584'
     PACKAGES = [
       'github.com/cihub/seelog'
     ]
@@ -78,9 +78,9 @@ class Command
   end
 
   def execute_separately(args)
-    args.each {|arg|
+    args.each do |arg|
       _execute(@command % "#{arg}")
-    }
+    end
   end
 
   def execute_jointly(args, sep = ' ')
@@ -205,7 +205,7 @@ if __FILE__ == $0
     # Update Go distributive upto the given stable version if needed.
     head_section('Searching for Go distributive updates') do
       unless no_rebuild_needed?(Setup::Golang::GO_ROOT, Setup::Golang::STABLE_REVISION)
-        Logger.info('Rebuild Go distributive')
+        Logger.info('Update Go distributive')
         Command.new('./all.bash', File.join(Setup::Golang::GO_ROOT, 'src')).execute_ordinarily()
       else
         Logger.info('Go distributive seemed up-to-date')
