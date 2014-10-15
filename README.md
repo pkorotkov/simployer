@@ -7,11 +7,11 @@ This vagrant bootstrap script is intended to help create minimally configured De
 
 ## Prerequisites
   
-  1. VT-x / AMD-V support
+  1. VT-x / AMD-V support (typically enabled in BIOS/UEFI shell)
   2. Oracle Virtualbox 4.3.XX from [here](https://www.virtualbox.org/wiki/Downloads)
   3. Vagrant from [here](https://www.vagrantup.com/downloads.html)
 
-## Using
+## Usage
 
 The only thing you need to create a portable deployment procedure via Vagrant is a Vagrant file. This repo contains a simplified template of such a file.
 To make the Vagrant file valid, just replace the placeholders with real values:
