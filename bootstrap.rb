@@ -1,50 +1,171 @@
 #!/usr/bin/env ruby
 
 require 'rubygems'
-require 'json'
 require 'open3'
 require 'fileutils'
 
-module Setup
-  module Ubuntu
-    REPOSITORIES = [
-      'ppa:mercurial-ppa/releases',
-      'ppa:git-core/ppa'
-    ]
-    PACKAGES = [
-      'mercurial',
-      'git',
-      'bzr',
-      'pkg-config',
-      'htop'
-    ]
+module Ubuntu
+  REPOSITORIES = [
+    'ppa:git-core/ppa',
+    'ppa:mercurial-ppa/releases'
+  ]
+
+  PACKAGES = [
+    'git',
+    'mercurial',
+    'bzr',
+    'pkg-config',
+    'htop'
+  ]
+
+  def Ubuntu.repository_added?(repo)
+    rs = repo[4..repo.length-1].split('/')[0]
+    File.readlines('/etc/apt/sources.list').each do |line|
+      if line.include?(rs)
+        return true
+      end
+    end
+    Dir['/etc/apt/sources.list.d/*.list'].each do |fn|
+      if fn.split('/').last.start_with?(rs)
+        return true
+      end
+    end
+    return false
   end
-  
-  module Golang
-    GO_ENV_VARS_FILE = '/etc/profile.d/goevars.sh'
-    GO_ROOT = '/usr/local/go'
-    GO_PATH = '/usr/local/gopath'
-    STABLE_REVISION = '0ca77a6b76c1'
-    PACKAGES = [
-      'github.com/cihub/seelog'
-    ]
+
+  def Ubuntu.apply
+    head_section("Applying #{self.name} setup", true, true) do
+      head_section('Adding PPA repositories, if any', REPOSITORIES.any?) do
+        REPOSITORIES.each do |repo|
+          Command.new("add-apt-repository -y #{repo}").execute_ordinarily() unless repository_added?(repo)
+        end
+      end
+      head_section('Updating Ubuntu packages') do
+        Command.new('apt-get update').execute_ordinarily()
+      end
+      head_section('Installing required Ubuntu packages, if any', PACKAGES.any?) do
+        Command.new("apt-get install -y %s").execute_jointly(PACKAGES)
+      end
+    end
   end
+end
+
+module Golang
+  GO_ENV_VARS_FILE = '/etc/profile.d/goevars.sh'
+  GO_ROOT = '/usr/local/go'
+  GO_PATH = '/usr/local/gopath'
+  STABLE_REVISION = '0969b8b281ef' #'f8a253b426f1'
+
+  PACKAGES = [
+    'github.com/cihub/seelog'
+  ]
   
-  module Rubylang
-    GEMS = []
+  def Golang.no_rebuild_needed?(dir, rev)
+    before_rev = `cd #{dir}; hg log -r. --template "{node|short}"`
+    `cd #{dir}; hg pull`
+    return (`cd #{dir}; hg update #{rev}`.strip!).eql?('0 files updated, 0 files merged, 0 files removed, 0 files unresolved'), before_rev
   end
-  
-  module Pythonlang
-    PACKAGES = []
+
+  def Golang.apply
+    head_section("Applying #{self.name} setup", true, true) do
+      head_section('Checking Go distributive integrity')
+      if !File.file?(GO_ENV_VARS_FILE)
+        Logger.info('Go environment file not found')
+        # Temporarily set GOROOT and GOPATH environment variables (until we restart the bash session).
+        ENV['GOROOT'] = GO_ROOT
+        ENV['GOPATH'] = GO_PATH
+        ENV['PATH'] = "#{ENV['PATH']}:#{GO_ROOT}/bin:#{GO_PATH}/bin"
+        
+        head_section('Installing Go distributive')
+        case
+        when Dir.exists?(GO_ROOT)
+          Logger.info('Remove GOROOT contents')
+          FileUtils.rm_rf(Dir.glob("#{GO_ROOT}/*"))
+        when !Dir.exists?(GO_ROOT)
+          Logger.info('Create GOROOT directory')
+          FileUtils.mkdir_p(GO_ROOT)
+        when Dir.exists?(GO_PATH)
+          Logger.info('Remove GOPATH contents')
+          FileUtils.rm_rf(Dir.glob("#{GO_PATH}/*"))
+        when !Dir.exists?(GO_PATH)
+          Logger.info('Create GOPATH directory')
+          FileUtils.mkdir_p(GO_PATH)
+        end
+
+        Logger.info('Clone official Go repository')
+        Command.new("hg clone -u #{STABLE_REVISION} https://code.google.com/p/go #{GO_ROOT}").execute_ordinarily()
+        Command.new('./all.bash', "#{GO_ROOT}/src").execute_ordinarily()
+
+        Logger.info('Create Go environment file')
+        File.open(GO_ENV_VARS_FILE, 'w') do |f|
+          f.write("export GOROOT=#{GO_ROOT}\n")
+          f.write("export GOPATH=#{GO_PATH}\n")
+          f.write("export PATH=\$PATH:\$GOROOT/bin:\$GOPATH/bin\n")
+        end
+      else
+        case
+        when !ENV.has_key?('GOROOT')
+          Logger.error('Go environment file found but GOROOT not set: abort running script')
+          abort
+        when !ENV.has_key?('GOPATH')
+          Logger.error('Go environment file found but GOPATH not set: abort running script')
+          abort
+        when !command_known?('go')
+          Logger.error('Go environment file found but go command not found: abort running script')
+          abort
+        end
+        Logger.info('Go environment file found')
+        # Update Go distributive upto the given stable version if needed.
+        head_section('Searching for Go distributive updates') do
+          nrn, br = no_rebuild_needed?(GO_ROOT, STABLE_REVISION)
+          unless nrn
+            Logger.info("Update Go distributive version (#{br} -> #{STABLE_REVISION})")
+            Command.new('./all.bash', File.join(GO_ROOT, 'src')).execute_ordinarily()
+          else
+            Logger.info('Go distributive needed no date')
+          end
+        end
+      end
+      head_section('Installing Go packages, if any', PACKAGES.any?) do
+        Command.new("go get -v %s").execute_separately(PACKAGES)
+      end
+    end
   end
-  
-  module Nodejs
-    PACKAGES = []
+end
+
+module Rubylang
+  GEMS = []
+
+  def Rubylang.gem_installed?(name)
+    (`gem list #{name} -i`.strip!).eql?('true')
+  end
+
+  def Rubylang.apply
+    head_section("Applying #{self.name} setup", true, true) do
+      head_section('Installing Ruby gems, if any', GEMS.any?) do
+        GEMS.each do |g|
+          unless gem_installed?(g)
+            Command.new("gem install #{g}").execute_ordinarily()
+          end
+        end
+      end
+    end
+  end
+end
+
+module Nodejs
+  PACKAGES = []
+
+  def Nodejs.apply
+    head_section("Applying #{self.name} setup", true, true) do
+      head_section('Installing Node.js packages, if any', PACKAGES.any?) do
+        Command.new("npm install -g %s").execute_separately(PACKAGES)
+      end
+    end
   end
 end
 
 # Script guts.
-
 STDOUT.sync = true
 
 class Logger
@@ -104,128 +225,19 @@ def command_known?(name)
   $?.success?
 end
 
-def gem_installed?(name)
-  (`gem list #{name} -i`.strip!).eql? 'true'
-end
-
-def no_rebuild_needed?(dir, rev)
-  # (`cd #{dir}; hg log -r. --template "{node|short}"`).eql? rev
-  `cd #{dir}; hg pull`
-  (`cd #{dir}; hg update #{rev}`.strip!).eql? '0 files updated, 0 files merged, 0 files removed, 0 files unresolved'
-end
-
-def repository_added?(repo)
-  rs = repo[4..repo.length-1].split('/')[0]
-  File.readlines('/etc/apt/sources.list').each do |line|
-    if line.include? rs
-      return true
+def head_section(name, apply = true, upper_case = false)
+  n = upper_case ? name.upcase : name
+  if apply
+    Logger.progress_info(n)
+    if block_given?
+      yield
     end
-  end
-  Dir['/etc/apt/sources.list.d/*.list'].each do |fn|
-    if fn.split('/').last.start_with? rs
-      return true
-    end
-  end
-  return false
-end
-
-def head_section(name, show = true)
-  if show
-    Logger.progress_info(name)
-  end
-  if block_given?
-    yield
   end
 end
 
 if __FILE__ == $0
-  head_section('Adding PPA repositories, if any', Setup::Ubuntu::REPOSITORIES.any?) do
-    Setup::Ubuntu::REPOSITORIES.each do |repo|
-      Command.new("add-apt-repository -y #{repo}").execute_ordinarily() unless repository_added?(repo)
-    end
-  end
-
-  head_section('Updating Ubuntu packages') do
-    Command.new('apt-get update').execute_ordinarily()
-  end
-
-  head_section('Installing required Ubuntu packages, if any', Setup::Ubuntu::PACKAGES.any?) do
-    Command.new("apt-get install -y %s").execute_jointly(Setup::Ubuntu::PACKAGES)
-  end
-
-  head_section('Checking Go distributive integrity')
-  if !File.file?(Setup::Golang::GO_ENV_VARS_FILE)
-    Logger.info('Go environment file not found')
-    goroot_path = Setup::Golang::GO_ROOT
-    gopath_path = Setup::Golang::GO_PATH
-    # Temporarily set GOROOT and GOPATH environment variables (until we restart the bash session).
-    ENV['GOROOT'] = goroot_path
-    ENV['GOPATH'] = gopath_path
-    ENV['PATH'] = "#{ENV['PATH']}:#{goroot_path}/bin:#{gopath_path}/bin"
-    
-    head_section('Installing Go distributive')
-    case
-    when Dir.exists?(goroot_path)
-      Logger.info('Remove GOROOT contents')
-      FileUtils.rm_rf(Dir.glob("#{goroot_path}/*"))
-    when !Dir.exists?(goroot_path)
-      Logger.info('Create GOROOT directory')
-      FileUtils.mkdir_p(goroot_path)
-    when Dir.exists?(gopath_path)
-      Logger.info('Remove GOPATH contents')
-      FileUtils.rm_rf(Dir.glob("#{gopath_path}/*"))
-    when !Dir.exists?(gopath_path)
-      Logger.info('Create GOPATH directory')
-      FileUtils.mkdir_p(gopath_path)
-    end
-
-    Logger.info('Clone official Go repository')
-    Command.new("hg clone -u #{Setup::Golang::STABLE_REVISION} https://code.google.com/p/go #{goroot_path}").execute_ordinarily()
-    Command.new('./all.bash', "#{goroot_path}/src").execute_ordinarily()
-
-    Logger.info('Create Go environment file')
-    File.open(Setup::Golang::GO_ENV_VARS_FILE, 'w') do |f|
-      f.write("export GOROOT=#{goroot_path}\n")
-      f.write("export GOPATH=#{gopath_path}\n")
-      f.write("export PATH=\$PATH:\$GOROOT/bin:\$GOPATH/bin\n")
-    end
-  else
-    case
-    when !ENV.has_key?('GOROOT')
-      Logger.error('Go environment file found but GOROOT not set: abort running script')
-      abort
-    when !ENV.has_key?('GOPATH')
-      Logger.error('Go environment file found but GOPATH not set: abort running script')
-      abort
-    when !command_known?('go')
-      Logger.error('Go environment file found but go command not found: abort running script')
-      abort
-    end
-    Logger.info('Go environment file found')
-    # Update Go distributive upto the given stable version if needed.
-    head_section('Searching for Go distributive updates') do
-      unless no_rebuild_needed?(Setup::Golang::GO_ROOT, Setup::Golang::STABLE_REVISION)
-        Logger.info('Update Go distributive version')
-        Command.new('./all.bash', File.join(Setup::Golang::GO_ROOT, 'src')).execute_ordinarily()
-      else
-        Logger.info('Go distributive seemed up-to-date')
-      end
-    end
-  end
-
-  head_section('Installing Go packages, if any', Setup::Golang::PACKAGES.any?) do
-    Command.new("go get -v %s").execute_separately(Setup::Golang::PACKAGES)
-  end
-
-  head_section('Installing Node.js packages, if any', Setup::Nodejs::PACKAGES.any?) do
-    Command.new("npm install -g %s").execute_separately(Setup::Nodejs::PACKAGES)
-  end
-
-  head_section('Installing Ruby gems, if any', Setup::Rubylang::GEMS.any?) do
-    Setup::Rubylang::GEMS.each do |g|
-      unless gem_installed?(g)
-        Command.new("gem install #{g}").execute_ordinarily()
-      end
-    end
-  end
+  Ubuntu.apply
+  Golang.apply
+  Nodejs.apply
+  Rubylang.apply
 end
