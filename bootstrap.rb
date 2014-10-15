@@ -54,7 +54,7 @@ module Golang
   GO_ENV_VARS_FILE = '/etc/profile.d/goevars.sh'
   GO_ROOT = '/usr/local/go'
   GO_PATH = '/usr/local/gopath'
-  STABLE_REVISION = '0969b8b281ef'
+  STABLE_REVISION = 'f8a253b426f1'
 
   PACKAGES = [
     'github.com/cihub/seelog'
@@ -226,9 +226,8 @@ def command_known?(name)
 end
 
 def head_section(name, apply = true, upper_case = false)
-  n = upper_case ? name.upcase : name
   if apply
-    Logger.progress_info(n)
+    Logger.progress_info(upper_case ? name.upcase : name)
     if block_given?
       yield
     end
