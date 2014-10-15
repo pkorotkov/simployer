@@ -54,7 +54,7 @@ module Golang
   GO_ENV_VARS_FILE = '/etc/profile.d/goevars.sh'
   GO_ROOT = '/usr/local/go'
   GO_PATH = '/usr/local/gopath'
-  STABLE_REVISION = '0969b8b281ef' #'f8a253b426f1'
+  STABLE_REVISION = '0969b8b281ef'
 
   PACKAGES = [
     'github.com/cihub/seelog'
