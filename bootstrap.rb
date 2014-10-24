@@ -54,7 +54,7 @@ module Golang
   GO_ENV_VARS_FILE = '/etc/profile.d/goevars.sh'
   GO_ROOT = '/usr/local/go'
   GO_PATH = '/usr/local/gopath'
-  STABLE_REVISION = 'f8a253b426f1'
+  STABLE_REVISION = '5ceb818e1ebf'
 
   PACKAGES = [
     'github.com/cihub/seelog'
@@ -158,7 +158,7 @@ module Nodejs
 
   def Nodejs.apply
     head_section("Applying #{self.name} setup", true, true) do
-      head_section('Installing Node.js packages, if any', PACKAGES.any?) do
+      head_section('Installing (globally) Node.js packages, if any', PACKAGES.any?) do
         Command.new("npm install -g %s").execute_separately(PACKAGES)
       end
     end
