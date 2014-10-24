@@ -3,14 +3,24 @@
 
 # Vagrantfile API/syntax version.
 VAGRANTFILE_API_VERSION = "2"
-# Name of virtual machine.
-HOST_NAME = "__HOST_NAME__"
+
+# Cardinal parameters of virtual machine.
+HOST_NAME = '__HOST_NAME__'
+BOX = '__BOX__'
+TCP_FORWARD_PORTS = [
+  {:host => __HOST_PORT__, :guest => __GUEST_PORT__}
+]
+SYNCED_FOLDERS = [
+  {:host_path => '__HOST_FOLDER_PATH__', :guest_path => '__GUEST_FOLDER_PATH__'}
+]
 
 Vagrant.configure(VAGRANTFILE_API_VERSION) do |config| 
-  config.vm.box = "__BOX__"
+  config.vm.box = BOX
   config.vm.provision :shell, path: "bootstrap.rb"
   config.vm.hostname = HOST_NAME
-  config.vm.network :forwarded_port, host: __HOST_PORT__, guest: __GUEST_PORT__, protocol: 'tcp'
+  TCP_FORWARD_PORTS.each do |tfp|
+    config.vm.network :forwarded_port, host: tfp[:host], guest: tfp[:guest], protocol: 'tcp'
+  end
 
   config.vm.box_check_update = true
 
@@ -27,7 +37,9 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
   # Default value: false
   # config.ssh.forward_agent = true
 
-  config.vm.synced_folder "gopath/", "/usr/local/gopath", create: true
+  SYNCED_FOLDERS.each do |fp|
+    config.vm.synced_folder fp[:host_path], fp[:guest_path], create: true
+  end
 
   config.vm.provider "virtualbox" do |vb|
     # Boot with headless mode.
