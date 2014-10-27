@@ -16,13 +16,15 @@ SYNCED_FOLDERS = [
 
 Vagrant.configure(VAGRANTFILE_API_VERSION) do |config| 
   config.vm.box = BOX
+  config.vm.box_check_update = true
+  
   config.vm.provision :shell, path: "bootstrap.rb"
+  
   config.vm.hostname = HOST_NAME
+  
   TCP_FORWARD_PORTS.each do |tfp|
     config.vm.network :forwarded_port, host: tfp[:host], guest: tfp[:guest], protocol: 'tcp'
   end
-
-  config.vm.box_check_update = true
 
   # Create a private network, which allows host-only access to the machine
   # using a specific IP.
