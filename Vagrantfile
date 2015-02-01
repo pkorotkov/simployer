@@ -6,7 +6,10 @@ VAGRANTFILE_API_VERSION = "2"
 
 # Cardinal parameters of virtual machine.
 HOST_NAME = '__HOST_NAME__'
+MEMORY = 2048
 BOX = '__BOX__'
+BOOTSTRAP_FILE = 'bootstrap.rb'
+
 TCP_FORWARD_PORTS = [
   {:host => __HOST_PORT__, :guest => __GUEST_PORT__}
 ]
@@ -18,7 +21,9 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
   config.vm.box = BOX
   config.vm.box_check_update = true
   
-  config.vm.provision :shell, path: "bootstrap.rb"
+  if File.file? BOOTSTRAP_FILE
+    config.vm.provision :shell, path: BOOTSTRAP_FILE
+  end
   
   config.vm.hostname = HOST_NAME
   
@@ -47,7 +52,7 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
     # Boot with headless mode.
     vb.gui = false
     vb.name = HOST_NAME
-    vb.customize ["modifyvm", :id, "--memory", "2048"]
+    vb.customize ["modifyvm", :id, "--memory", "#{MEMORY}"]
     vb.customize ["modifyvm", :id, "--chipset", "ich9"]
   end
 end
