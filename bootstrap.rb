@@ -51,10 +51,10 @@ module Ubuntu
 end
 
 module Golang
+  RELEASE_TAG = 'go1.4.1'
   GO_ENV_VARS_FILE = '/etc/profile.d/goevars.sh'
   GO_ROOT = '/usr/local/go'
   GO_PATH = '/usr/local/gopath'
-  RELEASE_TAG = 'go1.4.1'
 
   PACKAGES = [
   ]
@@ -107,7 +107,7 @@ module Golang
         Logger.info('Go environment file found')
       end
       head_section('Installing Go packages, if any', PACKAGES.any?) do
-        Command.new("go get -v %s").execute_for_each(PACKAGES)
+        Command.new("go get -u -v -t %s").execute_for_each(PACKAGES)
       end
     end
   end
