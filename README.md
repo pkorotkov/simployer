@@ -13,10 +13,12 @@ This vagrant bootstrap script is intended to help create minimally configured De
 
 ## Usage
 
-The only thing you need to create a portable deployment procedure via Vagrant is a Vagrant file. This repo contains a simplified template of such a file.
+The only thing you need to create a portable deployment procedure via Vagrant is Vagrantfile. This repo contains a simplified template of such a file.
 To make the Vagrant file valid, just replace the placeholders with real values:
 
 * `__BOX__` -- image ([box](https://docs.vagrantup.com/v2/boxes.html)) of the machine to deploy: e.g. ubuntu/trusty64.
 * `__HOST_NAME__` -- name of your server
 * `__GUEST_PORT__` -- TCP-port of the guest machine forwarded to a TCP-port of the host machine
 * `__HOST_PORT__` -- corresponding TCP-port of the host machine
+* `__GUEST_FOLDER_PATH__` -- absolute path of a synchronizable directory on the guest machine
+* `__HOST_FOLDER_PATH__` -- relative path of a synchronizable directory on the host machine
