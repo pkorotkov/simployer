@@ -104,7 +104,7 @@ module Golang
           Logger.error('Go environment file found but go command not found: abort running script')
           abort
         end
-        Logger.info('Go environment file found')
+        Logger.info('Go environment is installed')
       end
       head_section('Installing Go packages, if any', PACKAGES.any?) do
         Command.new("go get -u -v -t %s").execute_for_each(PACKAGES)
