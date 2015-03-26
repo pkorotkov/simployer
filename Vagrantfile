@@ -7,7 +7,8 @@ VAGRANTFILE_API_VERSION = "2"
 # Cardinal parameters of virtual machine.
 HOST_NAME = '__HOST_NAME__'
 CPU_NUMBER = 2
-MEMORY = 2048
+RAM = 2048
+VRAM = 32
 BOX = '__BOX__'
 BOOTSTRAP_FILE = 'bootstrap.rb'
 
@@ -54,7 +55,8 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
     vb.gui = false
     vb.name = HOST_NAME
     vb.customize ["modifyvm", :id, "--cpus", "#{CPU_NUMBER}"]
-    vb.customize ["modifyvm", :id, "--memory", "#{MEMORY}"]
+    vb.customize ["modifyvm", :id, "--memory", "#{RAM}"]
+    vb.customize ["modifyvm", :id, "--vram", "#{VRAM}"]
     vb.customize ["modifyvm", :id, "--chipset", "ich9"]
   end
 end
